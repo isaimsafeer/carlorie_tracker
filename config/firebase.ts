@@ -1,24 +1,29 @@
-// Import the functions you need from the SDKs you need
+// Import the functions you need from the SDKs
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
+// Use environment variables for config
 const firebaseConfig = {
-    apiKey: "AIzaSyDEAVWQDbrUoHVBcn9i_qQOYyJP-Z2ICpk",
-    authDomain: "nutri-ai-fa758.firebaseapp.com",
-    projectId: "nutri-ai-fa758",
-    storageBucket: "nutri-ai-fa758.firebasestorage.app",
-    messagingSenderId: "317091239940",
-    appId: "1:317091239940:web:5d15de9e524b6c267b3d51",
-    measurementId: "G-7QG8P264Z3"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Conditionally initialize analytics (only in browser)
+let analytics;
+if (typeof window !== "undefined") {
+  analytics = getAnalytics(app);
+}
 
 // Initialize services
 export const auth = getAuth(app);
