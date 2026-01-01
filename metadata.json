@@ -1,0 +1,8 @@
+
+{
+  "name": "NutriLens AI",
+  "description": "A clean, modern calorie tracking app that uses Gemini 3 Pro to analyze food photos and provide instant nutritional insights.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
