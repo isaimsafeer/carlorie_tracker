@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
-import { FoodAnalysisResult } from '../services/geminiService';
-import { MealType } from '../types';
+
+// import { MealType } from '../types'; // usage removed, we use string literal now
 import { MEAL_TYPES } from '../constants';
+import { FoodAnalysisResult } from '../services/geminiService';
 
 interface AnalysisResultProps {
   result: FoodAnalysisResult;
   imageUrl: string;
-  onConfirm: (item: { name: string; mealType: MealType; nutrients: any }) => void;
+  onConfirm: (item: { name: string; mealType: any; calories: number; protein: number; carbs: number; fats: number }) => void;
   onCancel: () => void;
 }
 
 const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, imageUrl, onConfirm, onCancel }) => {
-  const [mealType, setMealType] = useState<MealType>(MealType.LUNCH);
+  const [mealType, setMealType] = useState<string>('lunch');
   const [name, setName] = useState(result.foodName);
 
   return (
@@ -26,11 +27,11 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, imageUrl, onCon
             <p className="text-white/80 text-sm italic">"Looks delicious!"</p>
           </div>
         </div>
-        
+
         <div className="p-6 space-y-6">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Item Name</label>
-            <input 
+            <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full text-lg font-semibold bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500"
@@ -38,22 +39,22 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, imageUrl, onCon
           </div>
 
           <div className="grid grid-cols-4 gap-3">
-             <div className="text-center p-2 bg-emerald-50 rounded-xl">
-               <p className="text-[10px] text-emerald-600 font-bold uppercase">Cals</p>
-               <p className="font-bold text-gray-900">{Math.round(result.nutrients.calories)}</p>
-             </div>
-             <div className="text-center p-2 bg-blue-50 rounded-xl">
-               <p className="text-[10px] text-blue-600 font-bold uppercase">Prot</p>
-               <p className="font-bold text-gray-900">{Math.round(result.nutrients.protein)}g</p>
-             </div>
-             <div className="text-center p-2 bg-amber-50 rounded-xl">
-               <p className="text-[10px] text-amber-600 font-bold uppercase">Carbs</p>
-               <p className="font-bold text-gray-900">{Math.round(result.nutrients.carbs)}g</p>
-             </div>
-             <div className="text-center p-2 bg-red-50 rounded-xl">
-               <p className="text-[10px] text-red-600 font-bold uppercase">Fats</p>
-               <p className="font-bold text-gray-900">{Math.round(result.nutrients.fats)}g</p>
-             </div>
+            <div className="text-center p-2 bg-emerald-50 rounded-xl">
+              <p className="text-[10px] text-emerald-600 font-bold uppercase">Cals</p>
+              <p className="font-bold text-gray-900">{Math.round(result.calories)}</p>
+            </div>
+            <div className="text-center p-2 bg-blue-50 rounded-xl">
+              <p className="text-[10px] text-blue-600 font-bold uppercase">Prot</p>
+              <p className="font-bold text-gray-900">{Math.round(result.protein)}g</p>
+            </div>
+            <div className="text-center p-2 bg-amber-50 rounded-xl">
+              <p className="text-[10px] text-amber-600 font-bold uppercase">Carbs</p>
+              <p className="font-bold text-gray-900">{Math.round(result.carbs)}g</p>
+            </div>
+            <div className="text-center p-2 bg-red-50 rounded-xl">
+              <p className="text-[10px] text-red-600 font-bold uppercase">Fats</p>
+              <p className="font-bold text-gray-900">{Math.round(result.fats)}g</p>
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -63,11 +64,10 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, imageUrl, onCon
                 <button
                   key={type}
                   onClick={() => setMealType(type)}
-                  className={`p-3 rounded-xl text-sm font-semibold transition-all border-2 ${
-                    mealType === type 
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
-                      : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'
-                  }`}
+                  className={`p-3 rounded-xl text-sm font-semibold transition-all border-2 ${mealType === type
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                    : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'
+                    }`}
                 >
                   {type}
                 </button>
@@ -80,14 +80,21 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, imageUrl, onCon
           </p>
 
           <div className="flex gap-3 pt-2">
-            <button 
+            <button
               onClick={onCancel}
               className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600 transition-colors"
             >
               Cancel
             </button>
-            <button 
-              onClick={() => onConfirm({ name, mealType, nutrients: result.nutrients })}
+            <button
+              onClick={() => onConfirm({
+                name,
+                mealType,
+                calories: result.calories,
+                protein: result.protein,
+                carbs: result.carbs,
+                fats: result.fats
+              })}
               className="flex-[2] bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all"
             >
               Add to Log

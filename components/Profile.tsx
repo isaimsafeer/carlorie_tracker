@@ -10,10 +10,30 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    onUpdate({
-      ...profile,
-      [name]: isNaN(Number(value)) ? value : Number(value)
-    });
+    // Map legacy names or direct names to settings
+    const settingsFields = ['weight', 'height', 'age', 'gender', 'goalCalories', 'goalProtein', 'goalCarbs', 'goalFats'];
+
+    // Map goal names from old to new if needed
+    let fieldName = name;
+    if (name === 'goalCalories') fieldName = 'dailyCalorieGoal';
+    if (name === 'goalProtein') fieldName = 'proteinGoal';
+    if (name === 'goalCarbs') fieldName = 'carbsGoal';
+    if (name === 'goalFats') fieldName = 'fatsGoal';
+
+    if (settingsFields.includes(name) || ['dailyCalorieGoal', 'proteinGoal', 'carbsGoal', 'fatsGoal'].includes(fieldName)) {
+      onUpdate({
+        ...profile,
+        settings: {
+          ...profile.settings,
+          [fieldName]: isNaN(Number(value)) ? value : Number(value)
+        }
+      });
+    } else if (name === 'displayName') {
+      onUpdate({
+        ...profile,
+        displayName: value
+      });
+    }
   };
 
   return (
@@ -22,7 +42,7 @@ const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
         <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
           <span className="text-3xl">🧘‍♂️</span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">{profile.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{profile.displayName || 'Guest User'}</h1>
         <p className="text-gray-500">Setting goals for health</p>
       </header>
 
@@ -31,39 +51,39 @@ const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-400 uppercase">Weight (kg)</label>
-            <input 
+            <input
               name="weight"
               type="number"
-              value={profile.weight}
+              value={profile.settings.weight}
               onChange={handleChange}
               className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-400 uppercase">Height (cm)</label>
-            <input 
+            <input
               name="height"
               type="number"
-              value={profile.height}
+              value={profile.settings.height}
               onChange={handleChange}
               className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-400 uppercase">Age</label>
-            <input 
+            <input
               name="age"
               type="number"
-              value={profile.age}
+              value={profile.settings.age}
               onChange={handleChange}
               className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-400 uppercase">Gender</label>
-            <select 
+            <select
               name="gender"
-              value={profile.gender}
+              value={profile.settings.gender}
               onChange={handleChange}
               className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
             >
@@ -80,10 +100,10 @@ const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
         <div className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-400 uppercase">Calorie Goal (kcal)</label>
-            <input 
+            <input
               name="goalCalories"
               type="number"
-              value={profile.goalCalories}
+              value={profile.settings.dailyCalorieGoal}
               onChange={handleChange}
               className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
             />
@@ -91,30 +111,30 @@ const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-400 uppercase">Protein (g)</label>
-              <input 
+              <input
                 name="goalProtein"
                 type="number"
-                value={profile.goalProtein}
+                value={profile.settings.proteinGoal}
                 onChange={handleChange}
                 className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-400 uppercase">Carbs (g)</label>
-              <input 
+              <input
                 name="goalCarbs"
                 type="number"
-                value={profile.goalCarbs}
+                value={profile.settings.carbsGoal}
                 onChange={handleChange}
                 className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-400 uppercase">Fats (g)</label>
-              <input 
+              <input
                 name="goalFats"
                 type="number"
-                value={profile.goalFats}
+                value={profile.settings.fatsGoal}
                 onChange={handleChange}
                 className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 font-medium"
               />
@@ -122,8 +142,8 @@ const Profile: React.FC<ProfileProps> = ({ profile, onUpdate }) => {
           </div>
         </div>
       </div>
-      
-      <button 
+
+      <button
         onClick={() => alert('Profile updated!')}
         className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-100 active:scale-95 transition-transform"
       >

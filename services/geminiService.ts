@@ -1,60 +1,80 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
-import { Nutrients } from "../types";
+import { GoogleGenAI } from "@google/genai";
 
 export interface FoodAnalysisResult {
   foodName: string;
-  nutrients: Nutrients;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
   confidence: number;
   description: string;
 }
 
-export const analyzeFoodImage = async (base64Image: string): Promise<FoodAnalysisResult> => {
-  // Use Gemini 3 Pro for high-quality vision analysis
-  // Note: Per instructions, we create a new instance right before calling
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+export const analyzeFoodImage = async (
+  base64Image: string
+): Promise<FoodAnalysisResult> => {
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY || "",
+  });
+
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-image-preview',
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Image.split(',')[1] || base64Image,
-          },
-        },
-        {
-          text: "Analyze this food image. Identify the main food item and estimate its calories, protein, carbs, and fats per serving. Provide the result in JSON format.",
-        },
-      ],
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          foodName: { type: Type.STRING, description: "Name of the food item" },
-          nutrients: {
-            type: Type.OBJECT,
-            properties: {
-              calories: { type: Type.NUMBER, description: "Total calories (kcal)" },
-              protein: { type: Type.NUMBER, description: "Protein content (g)" },
-              carbs: { type: Type.NUMBER, description: "Carbohydrates content (g)" },
-              fats: { type: Type.NUMBER, description: "Fats content (g)" },
+    // ✅ THIS MODEL EXISTS on v1beta
+    model: "gemini-2.5-flash",
+
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: (() => {
+                const cleanData = base64Image.includes(",")
+                  ? base64Image.split(",")[1]
+                  : base64Image;
+                console.log("Image Data Length:", cleanData.length);
+                console.log("Image Data Prefix:", cleanData.substring(0, 20));
+                return cleanData;
+              })(),
             },
-            required: ["calories", "protein", "carbs", "fats"]
           },
-          confidence: { type: Type.NUMBER, description: "AI confidence score 0-1" },
-          description: { type: Type.STRING, description: "Short summary of ingredients detected" }
-        },
-        required: ["foodName", "nutrients", "confidence", "description"]
-      }
-    }
+          {
+            text: `
+Analyze this food image and return ONLY valid JSON.
+
+JSON format:
+{
+  "foodName": string,
+  "calories": number,
+  "protein": number,
+  "carbs": number,
+  "fats": number,
+  "confidence": number, // 0 to 1
+  "description": string
+}
+
+Do not include markdown.
+Do not include explanations.
+Return JSON only.
+            `.trim(),
+          },
+        ],
+      },
+    ],
   });
 
   const text = response.text;
-  if (!text) throw new Error("No response from AI");
-  
-  return JSON.parse(text.trim());
+  if (!text) {
+    throw new Error("No response from Gemini");
+  }
+
+  // Defensive JSON extraction (Flash can add whitespace)
+  const jsonStart = text.indexOf("{");
+  const jsonEnd = text.lastIndexOf("}");
+
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error("Invalid JSON returned by Gemini");
+  }
+
+  return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
 };

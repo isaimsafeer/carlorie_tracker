@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FoodItem, UserProfile, AppTab, MealType } from './types';
+import { MealEntry, UserProfile, AppTab } from './types';
 import { INITIAL_PROFILE } from './constants';
 import { analyzeFoodImage, FoodAnalysisResult } from './services/geminiService';
 import Dashboard from './components/Dashboard';
@@ -14,16 +14,32 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [profile, setProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('nutrilens_profile');
-    return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+    if (!saved) return INITIAL_PROFILE;
+    try {
+      const parsed = JSON.parse(saved);
+      // Validate that the parsed object has the required structure
+      if (!parsed || typeof parsed !== 'object' || !parsed.settings) {
+        return INITIAL_PROFILE;
+      }
+      return parsed;
+    } catch (e) {
+      console.error("Failed to parse profile:", e);
+      return INITIAL_PROFILE;
+    }
   });
-  
-  const [items, setItems] = useState<FoodItem[]>(() => {
+
+  const [items, setItems] = useState<MealEntry[]>(() => {
     const saved = localStorage.getItem('nutrilens_logs');
     if (!saved) return [];
-    const allItems: FoodItem[] = JSON.parse(saved);
-    // Only show today's items
-    const today = new Date().toISOString().split('T')[0];
-    return allItems.filter(item => new Date(item.timestamp).toISOString().split('T')[0] === today);
+    try {
+      const allItems: MealEntry[] = JSON.parse(saved);
+      // Only show today's items
+      const today = new Date().toISOString().split('T')[0];
+      return allItems.filter(item => {
+        const d = new Date(item.timestamp);
+        return !isNaN(d.getTime()) && d.toISOString().split('T')[0] === today;
+      });
+    } catch (e) { return []; }
   });
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -39,8 +55,11 @@ const App: React.FC = () => {
   useEffect(() => {
     // Keep full history but state only has today
     const saved = localStorage.getItem('nutrilens_logs');
-    const existing: FoodItem[] = saved ? JSON.parse(saved) : [];
-    const otherDays = existing.filter(i => new Date(i.timestamp).toISOString().split('T')[0] !== new Date().toISOString().split('T')[0]);
+    const existing: MealEntry[] = saved ? JSON.parse(saved) : [];
+    const otherDays = existing.filter(i => {
+      const d = new Date(i.timestamp);
+      return !isNaN(d.getTime()) && d.toISOString().split('T')[0] !== new Date().toISOString().split('T')[0];
+    });
     localStorage.setItem('nutrilens_logs', JSON.stringify([...otherDays, ...items]));
   }, [items]);
 
@@ -49,7 +68,7 @@ const App: React.FC = () => {
     setShowCamera(false);
     setIsAnalyzing(true);
     setError(null);
-    
+
     try {
       const result = await analyzeFoodImage(image);
       setAnalysisResult(result);
@@ -61,16 +80,29 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleConfirmItem = useCallback((data: { name: string; mealType: MealType; nutrients: any }) => {
-    const newItem: FoodItem = {
+  const handleConfirmItem = useCallback((data: { name: string; mealType: any; calories: number; protein: number; carbs: number; fats: number }) => {
+    // Note: data structure coming from AnalysisResult might need adjustment too, but we will fix AnalysisResult separately.
+    // Assuming AnalysisResult passes flat structure now.
+
+    // Actually, to minimize breakage, I should make `items` be `MealEntry[]`.
+    // Let's assume I fix App.tsx to use `MealEntry` instead of `FoodItem` for the state, OR add mealType/timestamp to FoodItem (but that defeats the purpose of separation).
+    // I will change App.tsx state to `MealEntry[]`.
+
+    const entry: MealEntry = {
       id: Math.random().toString(36).substr(2, 9),
-      name: data.name,
-      nutrients: data.nutrients,
-      mealType: data.mealType,
-      timestamp: Date.now(),
-      imageUrl: lastCapturedImage || undefined
+      foodName: data.name,
+      calories: data.calories,
+      protein: data.protein,
+      carbs: data.carbs,
+      fats: data.fats,
+      servingSize: "1 serving",
+      quantity: 1,
+      imageUrl: lastCapturedImage || undefined,
+      timestamp: new Date(),
+      mealType: data.mealType
     };
-    setItems(prev => [newItem, ...prev]);
+
+    setItems(prev => [entry, ...prev]);
     setAnalysisResult(null);
     setLastCapturedImage(null);
     setActiveTab('log');
@@ -116,8 +148,8 @@ const App: React.FC = () => {
         {/* Modals */}
         {showCamera && <CameraView onCapture={handleCapture} onClose={() => setShowCamera(false)} />}
         {analysisResult && lastCapturedImage && (
-          <AnalysisResult 
-            result={analysisResult} 
+          <AnalysisResult
+            result={analysisResult}
             imageUrl={lastCapturedImage}
             onConfirm={handleConfirmItem}
             onCancel={() => {
@@ -129,7 +161,7 @@ const App: React.FC = () => {
 
         {/* Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-100 px-6 py-3 pb-8 z-40 flex justify-between items-center shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
-          <button 
+          <button
             onClick={() => setActiveTab('dashboard')}
             className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'dashboard' ? 'text-emerald-500' : 'text-gray-300'}`}
           >
@@ -139,7 +171,7 @@ const App: React.FC = () => {
             <span className="text-[10px] font-bold uppercase tracking-widest">Dash</span>
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveTab('log')}
             className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'log' ? 'text-emerald-500' : 'text-gray-300'}`}
           >
@@ -150,7 +182,7 @@ const App: React.FC = () => {
           </button>
 
           {/* Fab Button */}
-          <button 
+          <button
             onClick={() => setShowCamera(true)}
             className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-200 -mt-8 active:scale-95 transition-transform"
           >
@@ -160,7 +192,7 @@ const App: React.FC = () => {
             </svg>
           </button>
 
-          <button 
+          <button
             className="flex flex-col items-center gap-1 transition-colors text-gray-300 pointer-events-none opacity-50"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +201,7 @@ const App: React.FC = () => {
             <span className="text-[10px] font-bold uppercase tracking-widest">Trends</span>
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-emerald-500' : 'text-gray-300'}`}
           >
